@@ -178,16 +178,24 @@ export async function stopLocationTracking(userId: string): Promise<Partial<Trip
   }
 }
 
-// Complete and save trip with purpose and companions data
+// Complete and save trip with transport mode, purpose, companions, and cost data
 export async function completeTrip(
   tripData: Partial<Trip>,
+  transportMode: TransportMode,
   purpose: string,
-  companions: number
+  companions: number,
+  cost: number
 ): Promise<Trip> {
   try {
-    // Add purpose and companions
+    // Add transport mode, purpose, companions, and cost
+    tripData.transportMode = transportMode;
     tripData.purpose = purpose;
     tripData.companions = companions;
+    tripData.cost = cost;
+
+    // Recalculate CO2 saved and points based on user-selected transport mode
+    tripData.co2Saved = calculateCO2Saved(tripData.distance || 0, transportMode);
+    tripData.points = calculatePoints(tripData.distance || 0, transportMode);
 
     // Save trip to Firestore
     const tripRef = await addDoc(collection(db, 'trips'), tripData);
@@ -237,8 +245,10 @@ function detectTransportMode(speed: number): TransportMode {
   
   if (kmh < 7) return TransportMode.WALKING;
   if (kmh < 25) return TransportMode.CYCLING;
+  if (kmh < 50) return TransportMode.BIKE;
   if (kmh < 80) return TransportMode.CAR;
-  return TransportMode.PUBLIC_TRANSPORT;
+  if (kmh < 120) return TransportMode.BUS;
+  return TransportMode.TRAIN;
 }
 
 // Calculate CO2 saved based on transport mode (in kg)
@@ -249,20 +259,28 @@ function calculateCO2Saved(distance: number, mode: TransportMode): number {
   const emissions = {
     car: 0.171, // Average car emissions
     bus: 0.089, // Public transport
+    train: 0.041, // Train emissions
     walking: 0,
     cycling: 0,
+    bike: 0.08, // Motorcycle emissions
   };
   
   // Calculate savings compared to car travel
   switch (mode) {
     case TransportMode.WALKING:
-      return distanceKm * emissions.car; // Full savings
     case TransportMode.CYCLING:
       return distanceKm * emissions.car; // Full savings
+    case TransportMode.BIKE:
+      return distanceKm * (emissions.car - emissions.bike);
+    case TransportMode.BUS:
     case TransportMode.PUBLIC_TRANSPORT:
       return distanceKm * (emissions.car - emissions.bus);
+    case TransportMode.TRAIN:
+      return distanceKm * (emissions.car - emissions.train);
     case TransportMode.CAR:
       return 0; // No savings
+    case TransportMode.OTHER:
+      return distanceKm * emissions.car * 0.5; // Assume 50% savings
     default:
       return 0;
   }
@@ -277,10 +295,17 @@ function calculatePoints(distance: number, mode: TransportMode): number {
       return Math.round(distanceKm * 10); // 10 points per km
     case TransportMode.CYCLING:
       return Math.round(distanceKm * 8); // 8 points per km
+    case TransportMode.BIKE:
+      return Math.round(distanceKm * 3); // 3 points per km
+    case TransportMode.BUS:
     case TransportMode.PUBLIC_TRANSPORT:
       return Math.round(distanceKm * 5); // 5 points per km
+    case TransportMode.TRAIN:
+      return Math.round(distanceKm * 6); // 6 points per km
     case TransportMode.CAR:
       return Math.round(distanceKm * 1); // 1 point per km
+    case TransportMode.OTHER:
+      return Math.round(distanceKm * 2); // 2 points per km
     default:
       return 0;
   }
@@ -294,8 +319,12 @@ function calculateTripCost(distance: number, mode: TransportMode): number {
   const costRates = {
     walking: 0, // Free
     cycling: 0.05, // Minimal maintenance cost
+    bike: 1.5, // Fuel cost per km for motorcycle
+    bus: 2.5, // Average public transport rate per km
+    train: 1.8, // Train fare per km
     public_transport: 2.5, // Average public transport rate per km
-    car: 0.5, // Fuel + maintenance per km
+    car: 4.5, // Fuel + maintenance per km
+    other: 2.0, // Average cost
     unknown: 0
   };
   
@@ -304,10 +333,17 @@ function calculateTripCost(distance: number, mode: TransportMode): number {
       return 0;
     case TransportMode.CYCLING:
       return distanceKm * costRates.cycling;
+    case TransportMode.BIKE:
+      return distanceKm * costRates.bike;
+    case TransportMode.BUS:
     case TransportMode.PUBLIC_TRANSPORT:
       return distanceKm * costRates.public_transport;
+    case TransportMode.TRAIN:
+      return distanceKm * costRates.train;
     case TransportMode.CAR:
       return distanceKm * costRates.car;
+    case TransportMode.OTHER:
+      return distanceKm * costRates.other;
     default:
       return 0;
   }

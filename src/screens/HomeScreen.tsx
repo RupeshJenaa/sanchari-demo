@@ -78,22 +78,24 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleTripCompletion = async (purpose: string, companions: number) => {
+  const handleTripCompletion = async (transportMode: TransportMode, purpose: string, companions: number, cost: number) => {
     try {
       if (!pendingTripData) return;
 
-      const completedTrip = await completeTrip(pendingTripData, purpose, companions);
+      const completedTrip = await completeTrip(pendingTripData, transportMode, purpose, companions, cost);
       setShowCompletionForm(false);
       setPendingTripData(null);
 
       Alert.alert(
         'Trip Completed!',
+        `Transport Mode: ${transportMode.charAt(0).toUpperCase() + transportMode.slice(1)}\n` +
         `Distance: ${((completedTrip.distance || 0) / 1000).toFixed(2)} km\n` +
         `Duration: ${formatDuration(completedTrip.duration || 0)}\n` +
         `CO₂ Saved: ${(completedTrip.co2Saved || 0).toFixed(2)} kg\n` +
         `Points Earned: ${completedTrip.points || 0}\n` +
         `Purpose: ${completedTrip.purpose}\n` +
-        `Companions: ${completedTrip.companions}`,
+        `Companions: ${completedTrip.companions}\n` +
+        `Cost: ₹${(completedTrip.cost || 0).toFixed(2)}`,
         [
           {
             text: 'View in Diary',
@@ -122,7 +124,7 @@ export const HomeScreen: React.FC = () => {
     setShowCompletionForm(false);
     // Still save the trip but without additional details
     if (pendingTripData) {
-      handleTripCompletion('Not specified', 0);
+      handleTripCompletion(TransportMode.UNKNOWN, 'Not specified', 0, 0);
     }
   };
 

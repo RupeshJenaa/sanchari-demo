@@ -1,4 +1,4 @@
-# Project Yatra - SIH Demo 🌱
+# Project Sanchari - SIH Demo 🌱
 
 An eco-friendly trip tracking app that rewards sustainable transportation choices with gamification features.
 

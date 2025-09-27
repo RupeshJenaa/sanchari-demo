@@ -97,8 +97,12 @@ export const TripDiaryScreen: React.FC = () => {
     switch (mode) {
       case TransportMode.WALKING: return '🚶';
       case TransportMode.CYCLING: return '🚴';
+      case TransportMode.BIKE: return '🏍️';
       case TransportMode.CAR: return '🚗';
+      case TransportMode.BUS: return '🚌';
+      case TransportMode.TRAIN: return '🚂';
       case TransportMode.PUBLIC_TRANSPORT: return '🚌';
+      case TransportMode.OTHER: return '🚀';
       default: return '❓';
     }
   };
@@ -107,8 +111,12 @@ export const TripDiaryScreen: React.FC = () => {
     switch (mode) {
       case TransportMode.WALKING: return '#4CAF50';
       case TransportMode.CYCLING: return '#2196F3';
+      case TransportMode.BIKE: return '#FF5722';
       case TransportMode.CAR: return '#FF9800';
+      case TransportMode.BUS: return '#9C27B0';
+      case TransportMode.TRAIN: return '#795548';
       case TransportMode.PUBLIC_TRANSPORT: return '#9C27B0';
+      case TransportMode.OTHER: return '#607D8B';
       default: return '#666666';
     }
   };
@@ -205,6 +213,11 @@ export const TripDiaryScreen: React.FC = () => {
                     {trip.transportMode.replace('_', ' ').charAt(0).toUpperCase() + 
                      trip.transportMode.slice(1).replace('_', ' ')}
                   </Text>
+                  {trip.purpose && (
+                    <Text style={styles.tripPurpose}>
+                      Purpose: {trip.purpose}
+                    </Text>
+                  )}
                 </View>
                 {trip.isValidated && (
                   <View style={styles.validatedBadge}>
@@ -260,8 +273,13 @@ export const TripDiaryScreen: React.FC = () => {
                   )}
                   {trip.frequency !== undefined && trip.frequency > 0 && (
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Weekly Frequency:</Text>
-                      <Text style={styles.infoValue}>{trip.frequency.toFixed(1)}x</Text>
+                      <Text style={styles.infoLabel}>Trip Frequency:</Text>
+                      <Text style={styles.infoValue}>
+                        {trip.frequency < 1 
+                          ? `${(trip.frequency * 7).toFixed(1)} times/week`
+                          : `${trip.frequency.toFixed(1)}/week`
+                        }
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -395,6 +413,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginTop: 2,
+  },
+  tripPurpose: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 1,
+    fontStyle: 'italic',
   },
   validatedBadge: {
     backgroundColor: '#4CAF50',

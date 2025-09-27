@@ -46,8 +46,12 @@ export interface Location {
 export enum TransportMode {
   WALKING = 'walking',
   CYCLING = 'cycling',
+  BIKE = 'bike',
   CAR = 'car',
+  BUS = 'bus',
+  TRAIN = 'train',
   PUBLIC_TRANSPORT = 'public_transport',
+  OTHER = 'other',
   UNKNOWN = 'unknown'
 }
 

@@ -9,10 +9,11 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { TransportMode } from '../types';
 
 interface TripCompletionFormProps {
   visible: boolean;
-  onComplete: (purpose: string, companions: number) => void;
+  onComplete: (transportMode: TransportMode, purpose: string, companions: number, cost: number) => void;
   onCancel: () => void;
   tripDistance: number; // in km
   tripDuration: number; // in seconds
@@ -20,14 +21,20 @@ interface TripCompletionFormProps {
 
 const TRIP_PURPOSES = [
   'Work',
+  'School',
   'Shopping',
-  'Education',
-  'Healthcare',
-  'Recreation',
-  'Social Visit',
-  'Business',
-  'Tourism',
+  'Leisure',
   'Other'
+];
+
+const TRANSPORT_MODES = [
+  { value: TransportMode.WALKING, label: 'Walking', icon: '🚶' },
+  { value: TransportMode.CYCLING, label: 'Cycling', icon: '🚴' },
+  { value: TransportMode.BIKE, label: 'Bike', icon: '🏍️' },
+  { value: TransportMode.CAR, label: 'Car', icon: '🚗' },
+  { value: TransportMode.BUS, label: 'Bus', icon: '🚌' },
+  { value: TransportMode.TRAIN, label: 'Train', icon: '🚂' },
+  { value: TransportMode.OTHER, label: 'Other', icon: '🚀' },
 ];
 
 export const TripCompletionForm: React.FC<TripCompletionFormProps> = ({
@@ -37,9 +44,11 @@ export const TripCompletionForm: React.FC<TripCompletionFormProps> = ({
   tripDistance,
   tripDuration,
 }) => {
+  const [selectedTransportMode, setSelectedTransportMode] = useState<TransportMode>(TransportMode.WALKING);
   const [selectedPurpose, setSelectedPurpose] = useState('');
   const [customPurpose, setCustomPurpose] = useState('');
   const [companions, setCompanions] = useState('0');
+  const [cost, setCost] = useState('0');
 
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -54,6 +63,7 @@ export const TripCompletionForm: React.FC<TripCompletionFormProps> = ({
   const handleSubmit = () => {
     const purpose = selectedPurpose === 'Other' ? customPurpose : selectedPurpose;
     const companionCount = parseInt(companions, 10);
+    const tripCost = parseFloat(cost);
 
     if (!purpose.trim()) {
       Alert.alert('Required Field', 'Please select or enter a trip purpose.');
@@ -65,20 +75,29 @@ export const TripCompletionForm: React.FC<TripCompletionFormProps> = ({
       return;
     }
 
-    onComplete(purpose.trim(), companionCount);
+    if (isNaN(tripCost) || tripCost < 0) {
+      Alert.alert('Invalid Input', 'Please enter a valid cost (0 or more).');
+      return;
+    }
+
+    onComplete(selectedTransportMode, purpose.trim(), companionCount, tripCost);
     
     // Reset form
+    setSelectedTransportMode(TransportMode.WALKING);
     setSelectedPurpose('');
     setCustomPurpose('');
     setCompanions('0');
+    setCost('0');
   };
 
   const handleCancel = () => {
     onCancel();
     // Reset form
+    setSelectedTransportMode(TransportMode.WALKING);
     setSelectedPurpose('');
     setCustomPurpose('');
     setCompanions('0');
+    setCost('0');
   };
 
   return (
@@ -103,6 +122,33 @@ export const TripCompletionForm: React.FC<TripCompletionFormProps> = ({
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Duration:</Text>
                 <Text style={styles.summaryValue}>{formatDuration(tripDuration)}</Text>
+              </View>
+            </View>
+
+            {/* Transport Mode Selection */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>How did you travel?</Text>
+              <View style={styles.transportGrid}>
+                {TRANSPORT_MODES.map((mode) => (
+                  <TouchableOpacity
+                    key={mode.value}
+                    style={[
+                      styles.transportButton,
+                      selectedTransportMode === mode.value && styles.selectedTransport,
+                    ]}
+                    onPress={() => setSelectedTransportMode(mode.value)}
+                  >
+                    <Text style={styles.transportIcon}>{mode.icon}</Text>
+                    <Text
+                      style={[
+                        styles.transportText,
+                        selectedTransportMode === mode.value && styles.selectedTransportText,
+                      ]}
+                    >
+                      {mode.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
 
@@ -177,6 +223,19 @@ export const TripCompletionForm: React.FC<TripCompletionFormProps> = ({
                   maxLength={2}
                 />
               </View>
+            </View>
+
+            {/* Cost Input */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Estimated cost incurred (₹)</Text>
+              <TextInput
+                style={styles.costInput}
+                placeholder="Enter cost (0 for free transport)"
+                value={cost}
+                onChangeText={setCost}
+                keyboardType="numeric"
+                maxLength={6}
+              />
             </View>
           </ScrollView>
 
@@ -333,6 +392,49 @@ const styles = StyleSheet.create({
   customCompanionInput: {
     backgroundColor: '#fff',
     borderColor: '#2e7d32',
+  },
+  transportGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  transportButton: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    width: '30%',
+    alignItems: 'center',
+    minHeight: 60,
+    justifyContent: 'center',
+  },
+  selectedTransport: {
+    backgroundColor: '#2e7d32',
+    borderColor: '#2e7d32',
+  },
+  transportIcon: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  transportText: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  selectedTransportText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  costInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    backgroundColor: '#f5f5f5',
   },
   buttonContainer: {
     flexDirection: 'row',
